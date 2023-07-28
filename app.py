@@ -28,17 +28,22 @@ def get_existing_data(db) -> List[Union[Dict, List]]:
     if existing_item:
         return json.loads(existing_item.data)
     else:
-        return []
+        return None
     
 @app.post("/save_data/")
 async def create_or_update_item(item_data: Dict):
     db = SessionLocal()
-
     existing_data = get_existing_data(db)
+    if existing_data is None:
+        existing_data = []
     existing_data.append(item_data)
     json_data = json.dumps(existing_data)
-    stmt = items.update().values(data=json_data)
-    db.execute(stmt)
+    if get_existing_data(db):
+        stmt = items.update().values(data=json_data)
+        db.execute(stmt)
+    else:
+        stmt = items.insert().values(data=json_data)
+        db.execute(stmt)
     db.commit()
     db.close()
     return {"message": "Data appended successfully."}
